@@ -4,6 +4,10 @@ Implementation of  "Accurate Emotion Strength Assessment for Seen and Unseen Spe
 https://arxiv.org/abs/2206.07229
 
 
+## Update
+modify test.py to get frame-level emotional strength
+
+
 ## Dependency
 Ubuntu 18.04.5 LTS
 
