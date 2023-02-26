@@ -90,7 +90,7 @@ def main():
     # results = []
 
     results_frame = []
-###
+
     for wavfile in tqdm(wavfiles):
 
         # spectrogram
@@ -116,7 +116,7 @@ def main():
 
     # Dump data
     data_frame = pd.DataFrame(
-        data={'file_path': [wf.replace('../../dataset/Emotional Speech Dataset (ESD)/', '') for wf in wavfiles],
+        data={'file_path': [wf.replace('../../dataset/ESDcorpus/', '') for wf in wavfiles],
               'score': [fc for fc in results_frame]})
 
     data_frame.to_csv(os.path.join(args.rootdir, 'frame_score.csv'))
