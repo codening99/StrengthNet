@@ -3,21 +3,22 @@
 
 
 import os
-import time 
+import time
 import numpy as np
 from tqdm import tqdm
 import argparse
 import fnmatch
+import pandas as pd
 
-from statistics import mean 
+from statistics import mean
 
 import tensorflow as tf
 from tensorflow import keras
 from model import CNN_BLSTM
 
-import utils   
+import utils
 import random
- 
+
 
 def find_files(root_dir, query="*.wav", include_root_dir=True):
     """Find files recursively.
@@ -39,6 +40,7 @@ def find_files(root_dir, query="*.wav", include_root_dir=True):
         files = [file_.replace(root_dir + "/", "") for file_ in files]
 
     return files
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -65,7 +67,7 @@ def main():
             # Currently, memory growth needs to be the same across GPUs
             for gpu in gpus:
                 tf.config.experimental.set_memory_growth(gpu, True)
-                
+
             logical_gpus = tf.config.experimental.list_logical_devices('GPU')
             print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
         except RuntimeError as e:
@@ -73,10 +75,10 @@ def main():
             print(e)
 
     ###################################
-    
+
     # find waveform files
     wavfiles = sorted(find_files(args.rootdir, "*.wav"))
-    
+
     # init model
     print("Loading model weights")
     StrengthNet = CNN_BLSTM()
@@ -85,26 +87,47 @@ def main():
 
     # evaluation
     print("Start evaluating {} waveforms...".format(len(wavfiles)))
-    results = []
+    # results = []
+
+    results_frame = []
 
     for wavfile in tqdm(wavfiles):
-        
+
         # spectrogram
         mel_sgram = utils.get_melspectrograms(wavfile)
         timestep = mel_sgram.shape[0]
-        mel_sgram = np.reshape(mel_sgram,(1, timestep, utils.n_mels))
+        mel_sgram = np.reshape(mel_sgram, (1, timestep, utils.n_mels))
         # make prediction
         Strength_score, Frame_score, emo_class = model.predict(mel_sgram, verbose=0, batch_size=1)
 
+        # print(Frame_score.shape)
+
         # write to list
-        result = wavfile + " {:.3f}".format(Strength_score)
-        results.append(result)
- 
+        # result = wavfile + " {:.3f}".format(Strength_score[0][0])
+        # results.append(result)
+
+        # save frame_score
+        # wavfile = wavfile.replace('../../dataset/Emotional Speech Dataset (ESD)/', '')
+        result_frame = ""
+        for item in range(Frame_score.shape[1]):
+            result_frame += " {:.3f}".format(Frame_score[0][item][0])
+        results_frame.append(result_frame)
+        # print(results_frame)
+
+    # Dump data
+    data_frame = pd.DataFrame(
+        data={'file_path': [wf.replace('../../dataset/Emotional Speech Dataset (ESD)/', '') for wf in wavfiles],
+              'score': [fc for fc in results_frame]})
+
+    data_frame.to_csv(os.path.join(args.rootdir, 'frame_score.csv'))
+
     # write final raw result
-    resultrawpath = os.path.join(args.rootdir, "StrengthNet_result_raw.txt")
-    with open(resultrawpath, "w") as outfile:
-        outfile.write("\n".join(sorted(results)))
-       
+    # resultrawpath = os.path.join(args.rootdir, "StrengthNet_result_raw.csv")
+    # with open(resultrawpath, "w") as outfile:
+    #     outfile.write("\n".join(sorted(results_frame)))
+
+    print('All done, Save at', args.rootdir, 'exit.')
+
 
 if __name__ == '__main__':
     main()
